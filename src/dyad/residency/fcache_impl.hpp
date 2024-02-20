@@ -6,6 +6,25 @@
 
 namespace dyad_residency {
 
+unsigned int get_cache_set_id (const std::string& fname, const unsigned num_sets, const unsigned seed = 0u)
+{
+    uint32_t hash[4] = {0u};  // Output for the hash
+
+    if (fname.empty ()) {
+        // TODO: report the exception
+        return 0u;
+    }
+    const char* str = fname.c_str ();
+
+    MurmurHash3_x64_128 (str, strlen (str), seed, hash);
+    return  (hash[0] ^ hash[1] ^ hash[2] ^ hash[3]) % num_sets;
+}
+
+unsigned int get_cache_set_id (const int fid, const unsigned num_sets, const unsigned seed = 0u)
+{
+    return fid % num_sets;
+}
+
 //=============================================================================
 //                              Cache
 //=============================================================================
@@ -58,26 +77,11 @@ void Cache<Set>::reset_cnts (void)
 }
 
 template <typename Set>
-unsigned int Cache<Set>::get_cache_set_id (const std::string& fname) const
-{
-    uint32_t hash[4] = {0u};  // Output for the hash
-
-    if (fname.empty ()) {
-        // TODO: report the exception
-        return 0u;
-    }
-    const char* str = fname.c_str ();
-
-    MurmurHash3_x64_128 (str, strlen (str), m_seed, hash);
-    return  (hash[0] ^ hash[1] ^ hash[2] ^ hash[3]) % m_num_sets;
-}
-
-template <typename Set>
-bool Cache<Set>::access (const std::string& fname)
+bool Cache<Set>::access (const id_t& fname)
 {
     //const unsigned int set_id  = 0u;
     //const unsigned int set_id = std::stoi (fname) % m_num_sets;
-    const unsigned int set_id = get_cache_set_id (fname);
+    const unsigned int set_id = get_cache_set_id (fname, m_num_sets, m_seed);
 
     return m_set[set_id].access (fname);
 }

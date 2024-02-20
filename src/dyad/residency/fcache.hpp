@@ -25,21 +25,34 @@ namespace dyad_residency {
 //                       Cache Block (cache line) for LRU
 //=============================================================================
 
+template <typename IDT = std::string>
 struct Simple_Block
 {
-    std::string m_id;        // unique id, file name
+    IDT m_id;        // unique id, file name
 
-    Simple_Block (const std::string& id)
+    Simple_Block (const IDT& id)
     : m_id (id) {}
+
+    std::string id_str () const;
 };
 
+template <typename IDT = std::string, typename PRT = unsigned int>
 struct Ranked_Block
 {
-    std::string m_id;        // unique id, file name
-    unsigned int m_priority; // priority
+    IDT m_id;        // unique id, file name
+    PRT m_priority; // priority
 
-    Ranked_Block (const std::string& id, unsigned int priority)
+    Ranked_Block (const IDT& id, PRT priority)
     : m_id (id), m_priority (priority) {}
+
+    std::string id_str () const {
+        if constexpr (typeid (IDT) == typeid (std::string)) {
+            return m_id;
+        } else {
+            using namespace std;
+            return to_string (m_id);
+        }
+    }
 };
 
 
@@ -47,27 +60,33 @@ struct Ranked_Block
 //                       Associative Cache Set
 //=============================================================================
 
+template <typename IDT = std::string>
 class Set_LRU
 {
+  public:
+    using id_t = IDT;
+
   protected:
     struct id{};
     struct priority{};
-    typedef boost::multi_index_container<
-        Simple_Block,
+    using Blk = Simple_Block<IDT>;
+
+    typedef typename boost::multi_index_container<
+        Blk,
         boost::multi_index::indexed_by<
             boost::multi_index::hashed_unique<boost::multi_index::tag<id>,
-                                               BOOST_MULTI_INDEX_MEMBER(Simple_Block, std::string, m_id)>,
+                                              BOOST_MULTI_INDEX_MEMBER(Blk, IDT, m_id)>,
             boost::multi_index::sequenced<boost::multi_index::tag<priority> >
         >
     > LRU_Blocks;
 
-    typedef boost::multi_index::index<LRU_Blocks,id>::type id_idx_t;
-    typedef boost::multi_index::index<LRU_Blocks,id>::type::iterator  id_iterator_t;
-    typedef boost::multi_index::index<LRU_Blocks,id>::type::const_iterator  id_citerator_t;
+    typedef typename boost::multi_index::index<LRU_Blocks,id>::type id_idx_t;
+    typedef typename boost::multi_index::index<LRU_Blocks,id>::type::iterator  id_iterator_t;
+    typedef typename boost::multi_index::index<LRU_Blocks,id>::type::const_iterator  id_citerator_t;
 
-    typedef boost::multi_index::index<LRU_Blocks,priority>::type priority_idx_t;
-    typedef boost::multi_index::index<LRU_Blocks,priority>::type::iterator  priority_iterator_t;
-    typedef boost::multi_index::index<LRU_Blocks,priority>::type::const_iterator  priority_citerator_t;
+    typedef typename boost::multi_index::index<LRU_Blocks,priority>::type priority_idx_t;
+    typedef typename boost::multi_index::index<LRU_Blocks,priority>::type::iterator  priority_iterator_t;
+    typedef typename boost::multi_index::index<LRU_Blocks,priority>::type::const_iterator  priority_citerator_t;
 
   protected:
     /** Cache set capacity (n-way in a set associative cache) in terms of the
@@ -91,11 +110,11 @@ class Set_LRU
 
     LRU_Blocks m_block_set;
 
-    virtual bool lookup (const std::string& fname, id_iterator_t &it);
+    virtual bool lookup (const IDT& fname, id_iterator_t &it);
     virtual void evict (void);
     virtual void access (id_iterator_t &it);
-    virtual void load_and_access (const std::string& fname);
-    virtual unsigned int get_priority ();
+    virtual void load_and_access (const IDT& fname);
+    virtual unsigned int get_priority (unsigned int);
 
   public:
     Set_LRU(unsigned int sz, unsigned int n_sets, unsigned int id)
@@ -112,60 +131,76 @@ class Set_LRU
 
     /** Access by a block index, and returns true if hit. Otherwise false.
      *  And there must be a following access at the lower cache layer. */
-    virtual bool access (const std::string& fname);
+    virtual bool access (const IDT& fname);
 
     virtual std::ostream& print (std::ostream &os) const;
 };
 
-std::ostream& operator<<(std::ostream& os, const Set_LRU & sl);
+template <typename IDT>
+std::ostream& operator<<(std::ostream& os, const Set_LRU<IDT> & sl);
 
 
-class Set_Prioritized : public Set_LRU
+template <typename IDT, typename PRT>
+class Set_Prioritized : public Set_LRU<IDT>
 {
+  public:
+    using id_t = IDT;
+    using priority_t = PRT;
+
   protected:
     struct id{};
     struct priority{};
+    using Blk = Ranked_Block<IDT, PRT>;
 
-    typedef boost::multi_index_container<
-        Ranked_Block,
+    typedef typename boost::multi_index_container<
+        Blk,
         boost::multi_index::indexed_by<
             boost::multi_index::hashed_unique<boost::multi_index::tag<id>,
-                                               BOOST_MULTI_INDEX_MEMBER(Ranked_Block, std::string, m_id)>,
+                                               BOOST_MULTI_INDEX_MEMBER(Blk, IDT, m_id)>,
             boost::multi_index::ordered_non_unique<boost::multi_index::tag<priority>,
-                                               BOOST_MULTI_INDEX_MEMBER(Ranked_Block, unsigned int, m_priority)>
+                                               BOOST_MULTI_INDEX_MEMBER(Blk, PRT, m_priority)>
         >
     > Prio_Blocks;
 
-    typedef boost::multi_index::index<Prio_Blocks,id>::type id_idx_t;
-    typedef boost::multi_index::index<Prio_Blocks,id>::type::iterator  id_iterator_t;
-    typedef boost::multi_index::index<Prio_Blocks,id>::type::const_iterator  id_citerator_t;
+    typedef typename boost::multi_index::index<Prio_Blocks,id>::type id_idx_t;
+    typedef typename boost::multi_index::index<Prio_Blocks,id>::type::iterator  id_iterator_t;
+    typedef typename boost::multi_index::index<Prio_Blocks,id>::type::const_iterator  id_citerator_t;
 
-    typedef boost::multi_index::index<Prio_Blocks,priority>::type priority_idx_t;
-    typedef boost::multi_index::index<Prio_Blocks,priority>::type::iterator  priority_iterator_t;
-    typedef boost::multi_index::index<Prio_Blocks,priority>::type::const_iterator  priority_citerator_t;
+    typedef typename boost::multi_index::index<Prio_Blocks,priority>::type priority_idx_t;
+    typedef typename boost::multi_index::index<Prio_Blocks,priority>::type::iterator  priority_iterator_t;
+    typedef typename boost::multi_index::index<Prio_Blocks,priority>::type::const_iterator  priority_citerator_t;
 
   private:
-    using Set_LRU::lookup;
-    using Set_LRU::access;
+    using Set_LRU<IDT>::lookup;
+    using Set_LRU<IDT>::access;
+    using Set_LRU<IDT>::get_priority;
 
   protected:
+    using Set_LRU<IDT>::m_size;
+    using Set_LRU<IDT>::m_num_sets;
+    using Set_LRU<IDT>::m_id;
+    using Set_LRU<IDT>::m_seqno;
+    using Set_LRU<IDT>::m_num_miss;
+    using Set_LRU<IDT>::m_level;
+
     Prio_Blocks m_block_set;
 
-    virtual bool lookup (const std::string& fname, id_iterator_t &it);
+    virtual bool lookup (const IDT& fname, id_iterator_t &it);
     virtual void evict (void);
     virtual void access (id_iterator_t &it);
-    virtual void load_and_access (const std::string& fname);
-    virtual unsigned int get_priority ();
+    virtual void load_and_access (const IDT& fname);
+    virtual PRT get_priority (PRT);
 
   public:
     Set_Prioritized (unsigned int sz, unsigned int n_sets, unsigned int id)
-    : Set_LRU (sz, n_sets, id) {}
+    : Set_LRU<IDT> (sz, n_sets, id) {}
     virtual ~Set_Prioritized () {}
-    virtual bool access (const std::string& fname);
+    virtual bool access (const IDT& fname);
     virtual std::ostream& print (std::ostream &os) const;
 };
 
-std::ostream& operator<<(std::ostream& os, const Set_Prioritized & sp);
+template <typename IDT, typename PRT>
+std::ostream& operator<<(std::ostream& os, const Set_Prioritized<IDT, PRT> & sp);
 
 //=============================================================================
 //                          Set Associative  Cache
@@ -177,6 +212,7 @@ class Cache
 {
   public:
     using Sets = typename std::vector<Set>;
+    using id_t = typename Set::id_t;
 
   protected:
     unsigned int m_size;     ///< Capacity of cache in terms of the number of blocks
@@ -186,8 +222,6 @@ class Cache
     std::string m_level;     ///< Level of this cache. e,g., L2.
 
     Sets m_set;
-
-    unsigned int get_cache_set_id (const std::string& fname) const;
 
   public:
     Cache (unsigned int sz, unsigned int w);
@@ -205,7 +239,7 @@ class Cache
     void set_level (const std::string& level);
 
     /// Returns true if hit. Otherwise false.
-    virtual bool access (const std::string& fname);
+    virtual bool access (const id_t& fname);
 
     std::ostream& print (std::ostream &os) const;
 };
