@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cstdlib>
 
+using IDT = std::string;
+
 int main (int argc, char** argv)
 {
     using namespace dyad_residency;
@@ -10,13 +12,14 @@ int main (int argc, char** argv)
     int seed = 0;
 
     if (argc > 2) {
+        std::cout << "Usage: " << argv[0] << " [seed]" << std::endl;
         return EXIT_FAILURE;
     }
     if (argc == 2) {
         seed = atoi (argv[1]);
     }
 
-    typedef std::vector<std::string> access;
+    typedef std::vector<IDT> access;
     access acc; // access pattern in terms of the block index
     acc.push_back ("1");
     acc.push_back ("4");
@@ -28,11 +31,11 @@ int main (int argc, char** argv)
     bool hitL1;
 
 #if 1
-    Cache<Set_LRU> cacheL1 (4, 2); // 2-way set-associative
-    Cache<Set_LRU> cacheL2 (8, 2); // cache capacity = 8 blocks
+    Cache<Set_LRU<IDT>> cacheL1 (4, 2); // 2-way set-associative
+    Cache<Set_LRU<IDT>> cacheL2 (8, 2); // cache capacity = 8 blocks
 #else
-    Cache<Set_LRU> cacheL1 (4, 0); // cache capacity = 4 blocks
-    Cache<Set_LRU> cacheL2 (8, 0); // fully-associative
+    Cache<Set_Prioritized<IDT, unsigned>> cacheL1 (4, 2);
+    Cache<Set_Prioritized<IDT, unsigned>> cacheL2 (8, 2);
 #endif
     cacheL1.set_seed (seed + 104677u);
     cacheL1.set_level ("L1");
