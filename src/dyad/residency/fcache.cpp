@@ -1,13 +1,13 @@
-#include <dyad/residency/fcache.hpp>
 #include <dyad/utils/murmur3.h>
-#include <typeinfo>
+#include <dyad/residency/fcache.hpp>
 #include <iostream>
+#include <typeinfo>
 
 #define DYAD_UTIL_LOGGER
 #include <dyad/common/dyad_logging.h>
 
-
-namespace dyad_residency {
+namespace dyad_residency
+{
 
 std::string id_str (const std::string& id)
 {
@@ -21,13 +21,12 @@ std::string id_str (const T& id)
     return to_string (id);
 }
 
-
 //=============================================================================
 //                          Associative Cache Set
 //=============================================================================
 
 template <typename IDT>
-bool Set_LRU<IDT>::lookup (const IDT& fname, id_iterator_t &it)
+bool Set_LRU<IDT>::lookup (const IDT& fname, id_iterator_t& it)
 {
     id_idx_t& index_id = boost::multi_index::get<id> (m_block_set);
     it = index_id.find (fname);
@@ -36,12 +35,16 @@ bool Set_LRU<IDT>::lookup (const IDT& fname, id_iterator_t &it)
 
 template <typename IDT>
 void Set_LRU<IDT>::evict (void)
-{ // LRU
-    if (m_block_set.size () == 0) return;
+{  // LRU
+    if (m_block_set.size () == 0)
+        return;
     priority_idx_t& index_priority = boost::multi_index::get<priority> (m_block_set);
     priority_iterator_t it = index_priority.begin ();
-    DYAD_LOG_INFO (NULL, "    %s evicts %s from set %u\n", \
-                   m_level.c_str (), id_str (it->m_id).c_str (), m_id);
+    DYAD_LOG_INFO (NULL,
+                   "    %s evicts %s from set %u\n",
+                   m_level.c_str (),
+                   id_str (it->m_id).c_str (),
+                   m_id);
     index_priority.erase (it);
 }
 
@@ -50,8 +53,11 @@ void Set_LRU<IDT>::load_and_access (const IDT& fname)
 {
     m_num_miss++;
 
-    DYAD_LOG_INFO (NULL, "    %s adds %s to set %u\n", \
-                   m_level.c_str (), id_str (fname).c_str (), m_id);
+    DYAD_LOG_INFO (NULL,
+                   "    %s adds %s to set %u\n",
+                   m_level.c_str (),
+                   id_str (fname).c_str (),
+                   m_id);
     if (m_size == m_block_set.size ()) {
         evict ();
     }
@@ -61,7 +67,7 @@ void Set_LRU<IDT>::load_and_access (const IDT& fname)
 }
 
 template <typename IDT>
-void Set_LRU<IDT>::access (id_iterator_t &it)
+void Set_LRU<IDT>::access (id_iterator_t& it)
 {
     Simple_Block<IDT> blk = *it;
     m_block_set.erase (it);
@@ -73,12 +79,15 @@ template <typename IDT>
 bool Set_LRU<IDT>::access (const IDT& fname)
 {
     id_iterator_t it;
-    if (lookup (fname, it)) { // hit
-        DYAD_LOG_INFO (NULL, "    %s reuses %s from set %u\n", \
-                       m_level.c_str (), id_str (fname).c_str (), m_id);
+    if (lookup (fname, it)) {  // hit
+        DYAD_LOG_INFO (NULL,
+                       "    %s reuses %s from set %u\n",
+                       m_level.c_str (),
+                       id_str (fname).c_str (),
+                       m_id);
         access (it);
         return true;
-    } else { // miss
+    } else {  // miss
         load_and_access (fname);
         return false;
     }
@@ -91,10 +100,10 @@ unsigned int Set_LRU<IDT>::get_priority (unsigned int)
 }
 
 template <typename IDT>
-std::ostream& Set_LRU<IDT>::print (std::ostream &os) const
+std::ostream& Set_LRU<IDT>::print (std::ostream& os) const
 {
     os << "size         : " << m_size << std::endl;
-    os << "num accesses : " << m_seqno<< std::endl;
+    os << "num accesses : " << m_seqno << std::endl;
     os << "num misses   : " << m_num_miss << std::endl;
     os << "blkId        : " << std::endl;
 
@@ -109,15 +118,13 @@ std::ostream& Set_LRU<IDT>::print (std::ostream &os) const
 }
 
 template <typename IDT>
-std::ostream& operator<<(std::ostream& os, const Set_LRU<IDT>& cc)
+std::ostream& operator<< (std::ostream& os, const Set_LRU<IDT>& cc)
 {
     return cc.print (os);
 }
 
-
-
 template <typename IDT, typename PRT>
-bool Set_Prioritized<IDT, PRT>::lookup (const IDT& fname, id_iterator_t &it)
+bool Set_Prioritized<IDT, PRT>::lookup (const IDT& fname, id_iterator_t& it)
 {
     id_idx_t& index_id = boost::multi_index::get<id> (m_block_set);
     it = index_id.find (fname);
@@ -127,11 +134,15 @@ bool Set_Prioritized<IDT, PRT>::lookup (const IDT& fname, id_iterator_t &it)
 template <typename IDT, typename PRT>
 void Set_Prioritized<IDT, PRT>::evict (void)
 {
-    if (m_block_set.size () == 0) return;
+    if (m_block_set.size () == 0)
+        return;
     priority_idx_t& index_priority = boost::multi_index::get<priority> (m_block_set);
     priority_iterator_t it = index_priority.begin ();
-    DYAD_LOG_INFO (NULL, "    %s evicts %s from set %u\n", \
-                   m_level.c_str (), id_str (it->m_id).c_str (), m_id);
+    DYAD_LOG_INFO (NULL,
+                   "    %s evicts %s from set %u\n",
+                   m_level.c_str (),
+                   id_str (it->m_id).c_str (),
+                   m_id);
     index_priority.erase (it);
 }
 
@@ -140,8 +151,11 @@ void Set_Prioritized<IDT, PRT>::load_and_access (const IDT& fname)
 {
     m_num_miss++;
 
-    DYAD_LOG_INFO (NULL, "    %s adds %s to set %u\n", \
-                   m_level.c_str (), id_str (fname).c_str (), m_id);
+    DYAD_LOG_INFO (NULL,
+                   "    %s adds %s to set %u\n",
+                   m_level.c_str (),
+                   id_str (fname).c_str (),
+                   m_id);
     if (m_size == m_block_set.size ()) {
         evict ();
     }
@@ -151,7 +165,7 @@ void Set_Prioritized<IDT, PRT>::load_and_access (const IDT& fname)
 }
 
 template <typename IDT, typename PRT>
-void Set_Prioritized<IDT, PRT>::access (id_iterator_t &it)
+void Set_Prioritized<IDT, PRT>::access (id_iterator_t& it)
 {
     Ranked_Block<IDT, PRT> blk = *it;
     // reassigning the priority
@@ -165,12 +179,15 @@ template <typename IDT, typename PRT>
 bool Set_Prioritized<IDT, PRT>::access (const IDT& fname)
 {
     id_iterator_t it;
-    if (lookup (fname, it)) { // hit
-        DYAD_LOG_INFO (NULL, "   %s reuses %s from set %u\n", \
-                       m_level.c_str (), id_str (fname).c_str (), m_id);
+    if (lookup (fname, it)) {  // hit
+        DYAD_LOG_INFO (NULL,
+                       "   %s reuses %s from set %u\n",
+                       m_level.c_str (),
+                       id_str (fname).c_str (),
+                       m_id);
         access (it);
         return true;
-    } else { // miss
+    } else {  // miss
         load_and_access (fname);
         return false;
     }
@@ -183,10 +200,10 @@ PRT Set_Prioritized<IDT, PRT>::get_priority (PRT)
 }
 
 template <typename IDT, typename PRT>
-std::ostream& Set_Prioritized<IDT, PRT>::print (std::ostream &os) const
+std::ostream& Set_Prioritized<IDT, PRT>::print (std::ostream& os) const
 {
     os << "size         : " << m_size << std::endl;
-    os << "num accesses : " << m_seqno<< std::endl;
+    os << "num accesses : " << m_seqno << std::endl;
     os << "num misses   : " << m_num_miss << std::endl;
     os << "priority blkId:" << std::endl;
 
@@ -201,13 +218,13 @@ std::ostream& Set_Prioritized<IDT, PRT>::print (std::ostream &os) const
 }
 
 template <typename IDT, typename PRT>
-std::ostream& operator<<(std::ostream& os, const Set_Prioritized<IDT, PRT>& cc)
+std::ostream& operator<< (std::ostream& os, const Set_Prioritized<IDT, PRT>& cc)
 {
     return cc.print (os);
 }
 
-
-namespace {
+namespace
+{
 template <typename T>
 void __attribute__ ((unused)) instantiate_LRU ()
 {
@@ -255,6 +272,6 @@ void __attribute__ ((unused)) instantiate_all ()
     instantiate_Prioritized<std::string, float> ();
 }
 
-} // end of namespace
+}  // end of namespace
 
-} // end of namespace dyad_residency
+}  // end of namespace dyad_residency

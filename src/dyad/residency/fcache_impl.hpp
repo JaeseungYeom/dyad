@@ -1,12 +1,14 @@
 #ifndef DYAD_RESIDENCY_FCACHE_IMPL_H
 #define DYAD_RESIDENCY_FCACHE_IMPL_H
-#include <dyad/residency/fcache.hpp>
 #include <dyad/utils/murmur3.h>
+#include <dyad/residency/fcache.hpp>
 
+namespace dyad_residency
+{
 
-namespace dyad_residency {
-
-unsigned int get_cache_set_id (const std::string& fname, const unsigned num_sets, const unsigned seed = 0u)
+unsigned int get_cache_set_id (const std::string& fname,
+                               const unsigned num_sets,
+                               const unsigned seed = 0u)
 {
     uint32_t hash[4] = {0u};  // Output for the hash
 
@@ -17,7 +19,7 @@ unsigned int get_cache_set_id (const std::string& fname, const unsigned num_sets
     const char* str = fname.c_str ();
 
     MurmurHash3_x64_128 (str, strlen (str), seed, hash);
-    return  (hash[0] ^ hash[1] ^ hash[2] ^ hash[3]) % num_sets;
+    return (hash[0] ^ hash[1] ^ hash[2] ^ hash[3]) % num_sets;
 }
 
 unsigned int get_cache_set_id (const int fid, const unsigned num_sets, const unsigned seed = 0u)
@@ -30,10 +32,9 @@ unsigned int get_cache_set_id (const int fid, const unsigned num_sets, const uns
 //=============================================================================
 
 template <typename Set>
-Cache<Set>::Cache (unsigned int sz, unsigned int w)
-: m_size (sz), m_ways (w), m_seed (104729u)
+Cache<Set>::Cache (unsigned int sz, unsigned int w) : m_size (sz), m_ways (w), m_seed (104729u)
 {
-    if (m_ways == 0) { // fully associative
+    if (m_ways == 0) {  // fully associative
         m_num_sets = 1;
         m_ways = m_size;
     } else {
@@ -79,8 +80,8 @@ void Cache<Set>::reset_cnts (void)
 template <typename Set>
 bool Cache<Set>::access (const id_t& fname)
 {
-    //const unsigned int set_id  = 0u;
-    //const unsigned int set_id = std::stoi (fname) % m_num_sets;
+    // const unsigned int set_id  = 0u;
+    // const unsigned int set_id = std::stoi (fname) % m_num_sets;
     const unsigned int set_id = get_cache_set_id (fname, m_num_sets, m_seed);
 
     return m_set[set_id].access (fname);
@@ -96,7 +97,7 @@ void Cache<Set>::set_level (const std::string& level)
 }
 
 template <typename Set>
-std::ostream& Cache<Set>::print (std::ostream &os) const
+std::ostream& Cache<Set>::print (std::ostream& os) const
 {
     os << "==========================================" << std::endl;
     os << "size:  " << m_size << std::endl;
@@ -106,7 +107,7 @@ std::ostream& Cache<Set>::print (std::ostream &os) const
     typename Sets::const_iterator it = m_set.begin ();
     typename Sets::const_iterator itend = m_set.end ();
     for (unsigned int i = 0; it != itend; it++, i++) {
-        os << "-------- set "<< i << " ----------" << std::endl;
+        os << "-------- set " << i << " ----------" << std::endl;
         os << *it << std::endl;
     }
     os << "==========================================" << std::endl;
@@ -114,10 +115,10 @@ std::ostream& Cache<Set>::print (std::ostream &os) const
 }
 
 template <typename Set>
-std::ostream& operator<< (std::ostream& os, const Cache<Set> & cc)
+std::ostream& operator<< (std::ostream& os, const Cache<Set>& cc)
 {
     return cc.print (os);
 }
 
-} // end of namespace dyad_residency
-#endif // DYAD_RESIDENCY_FCACHE_IMPL_H
+}  // end of namespace dyad_residency
+#endif  // DYAD_RESIDENCY_FCACHE_IMPL_H
